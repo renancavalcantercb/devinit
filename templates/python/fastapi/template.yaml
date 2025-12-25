@@ -1,0 +1,106 @@
+version: "1.0.0"
+name: "FastAPI API"
+description: "Production-ready FastAPI service with Docker support"
+
+language: python
+framework: fastapi
+min_cli_version: "1.0.0"
+
+requirements:
+  system:
+    - command: python3
+      version: ">=3.11"
+      required: true
+      install_hint: "https://www.python.org/downloads/"
+
+    - command: docker
+      version: ">=24.0"
+      required: false
+      when: "{{ .IncludeDocker }}"
+      install_hint: "https://docs.docker.com/install/"
+
+    - command: poetry
+      required: true
+      install_hint: "curl -sSL https://install.python-poetry.org | python3 -"
+
+variables:
+  project_name:
+    type: string
+    required: true
+    pattern: "^[a-z][a-z0-9-]*$"
+    description: "Project name (lowercase, hyphens allowed)"
+
+  python_version:
+    type: string
+    default: "3.11"
+    description: "Python version"
+
+  include_docker:
+    type: boolean
+    default: true
+    description: "Include Docker configuration"
+
+  database:
+    type: choice
+    choices: ["postgres", "sqlite", "none"]
+    default: "none"
+    description: "Database to configure"
+
+  include_tests:
+    type: boolean
+    default: true
+    description: "Include pytest setup"
+
+files:
+  - src: main.py.tmpl
+    dest: src/main.py
+
+  - src: __init__.py
+    dest: src/__init__.py
+
+  - src: pyproject.toml.tmpl
+    dest: pyproject.toml
+
+  - src: README.md.tmpl
+    dest: README.md
+
+  - src: .gitignore
+    dest: .gitignore
+
+  - src: .env.example.tmpl
+    dest: .env.example
+
+  - src: Dockerfile.tmpl
+    dest: Dockerfile
+    conditions: ["{{ .IncludeDocker }}"]
+
+  - src: docker-compose.yml.tmpl
+    dest: docker-compose.yml
+    conditions: ["{{ .IncludeDocker }}"]
+
+  - src: .dockerignore
+    dest: .dockerignore
+    conditions: ["{{ .IncludeDocker }}"]
+
+  - src: test_main.py.tmpl
+    dest: tests/test_main.py
+    conditions: ["{{ .IncludeTests }}"]
+
+  - src: test_init.py
+    dest: tests/__init__.py
+    conditions: ["{{ .IncludeTests }}"]
+
+hooks:
+  post_generate:
+    - run: "poetry install"
+      working_dir: "{{ .OutputDir }}"
+      error_level: "warn"
+
+    - run: "git init"
+      working_dir: "{{ .OutputDir }}"
+      error_level: "ignore"
+
+healthcheck:
+  command: "curl -f http://localhost:8000/health"
+  port: 8000
+  timeout: "5s"

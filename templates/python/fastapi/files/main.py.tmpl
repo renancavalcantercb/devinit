@@ -1,0 +1,52 @@
+from fastapi import FastAPI{{if eq .Database "postgres"}}, Depends
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, Session{{end}}
+import os
+
+app = FastAPI(
+    title="{{ .ProjectName | pascal }}",
+    description="{{ .ProjectName }} API",
+    version="0.1.0"
+)
+
+{{if eq .Database "postgres"}}
+# Database configuration
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost/{{ .ProjectName | snake }}")
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+{{end}}
+
+@app.get("/")
+async def root():
+    return {
+        "message": "Welcome to {{ .ProjectName | pascal }} API",
+        "version": "0.1.0"
+    }
+
+@app.get("/health")
+async def health():
+    return {
+        "status": "healthy",
+        "service": "{{ .ProjectName }}"
+    }
+
+{{if eq .Database "postgres"}}
+@app.get("/db-health")
+async def db_health(db: Session = Depends(get_db)):
+    try:
+        db.execute("SELECT 1")
+        return {"status": "healthy", "database": "connected"}
+    except Exception as e:
+        return {"status": "unhealthy", "database": str(e)}
+{{end}}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

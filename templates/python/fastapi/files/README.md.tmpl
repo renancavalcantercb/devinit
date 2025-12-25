@@ -1,0 +1,162 @@
+# {{ .ProjectName | pascal }}
+
+{{ .ProjectName }} API built with FastAPI.
+
+## Prerequisites
+
+- Python {{ .PythonVersion }}+
+- Poetry
+{{if .IncludeDocker}}- Docker and Docker Compose{{end}}
+{{if eq .Database "postgres"}}- PostgreSQL (if running without Docker){{end}}
+
+## Installation
+
+### Using Poetry
+
+```bash
+# Install dependencies
+poetry install
+
+# Activate virtual environment
+poetry shell
+```
+
+{{if .IncludeDocker}}
+### Using Docker
+
+```bash
+# Build and run
+docker compose up --build
+
+# Run in background
+docker compose up -d
+```
+{{end}}
+
+## Running Locally
+
+```bash
+# Development mode with auto-reload
+poetry run uvicorn src.main:app --reload
+
+# Production mode
+poetry run uvicorn src.main:app --host 0.0.0.0 --port 8000
+```
+
+The API will be available at `http://localhost:8000`
+
+## API Documentation
+
+Once the server is running, visit:
+
+- Swagger UI: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
+
+## Endpoints
+
+- `GET /` - Root endpoint
+- `GET /health` - Health check endpoint
+{{if eq .Database "postgres"}}- `GET /db-health` - Database health check{{end}}
+
+## Project Structure
+
+```
+{{ .ProjectName }}/
+├── src/
+│   ├── __init__.py
+│   └── main.py          # Main FastAPI application
+{{if .IncludeTests}}├── tests/
+│   ├── __init__.py
+│   └── test_main.py     # API tests
+{{end}}├── pyproject.toml       # Poetry configuration
+{{if .IncludeDocker}}├── Dockerfile           # Docker image definition
+├── docker-compose.yml   # Docker Compose configuration
+├── .dockerignore
+{{end}}├── .env.example         # Environment variables template
+├── .gitignore
+└── README.md
+```
+
+## Environment Variables
+
+Copy `.env.example` to `.env` and configure:
+
+```bash
+cp .env.example .env
+```
+
+{{if eq .Database "postgres"}}
+### Database Configuration
+
+```
+DATABASE_URL=postgresql://user:password@localhost/{{ .ProjectName | snake }}
+```
+{{end}}
+
+{{if .IncludeTests}}
+## Testing
+
+```bash
+# Run tests
+poetry run pytest
+
+# Run with coverage
+poetry run pytest --cov=src tests/
+
+# Run specific test
+poetry run pytest tests/test_main.py::test_read_root
+```
+{{end}}
+
+## Code Quality
+
+```bash
+# Format code
+poetry run black .
+
+# Lint code
+poetry run ruff check .
+
+# Type checking
+poetry run mypy src/
+```
+
+{{if .IncludeDocker}}
+## Docker
+
+### Build Image
+
+```bash
+docker build -t {{ .ProjectName }}:latest .
+```
+
+### Run Container
+
+```bash
+docker run -p 8000:8000 {{ .ProjectName }}:latest
+```
+
+### Docker Compose
+
+```bash
+# Start services
+docker compose up
+
+# Stop services
+docker compose down
+
+# View logs
+docker compose logs -f
+```
+{{end}}
+
+## Development
+
+1. Create a new branch for your feature
+2. Make your changes
+3. Run tests and linting
+4. Submit a pull request
+
+## License
+
+MIT

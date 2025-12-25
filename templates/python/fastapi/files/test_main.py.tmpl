@@ -1,0 +1,35 @@
+import pytest
+from fastapi.testclient import TestClient
+from src.main import app
+
+client = TestClient(app)
+
+
+def test_read_root():
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "message" in response.json()
+    assert "{{ .ProjectName | pascal }}" in response.json()["message"]
+
+
+def test_health_check():
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json()["status"] == "healthy"
+    assert response.json()["service"] == "{{ .ProjectName }}"
+
+
+{{if eq .Database "postgres"}}
+def test_db_health_check():
+    response = client.get("/db-health")
+    assert response.status_code == 200
+    # Note: This might fail if database is not running
+    # Consider mocking database connection for unit tests
+{{end}}
+
+
+def test_openapi_schema():
+    response = client.get("/openapi.json")
+    assert response.status_code == 200
+    schema = response.json()
+    assert schema["info"]["title"] == "{{ .ProjectName | pascal }}"
