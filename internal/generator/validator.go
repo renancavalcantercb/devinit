@@ -23,24 +23,20 @@ func ValidateProjectName(name string) error {
 		return fmt.Errorf("project name cannot be empty")
 	}
 
-	// Check for path traversal attempts
 	if name == "." || name == ".." {
 		return fmt.Errorf("invalid project name: '.' and '..' are not allowed")
 	}
 
-	// Check for path separators (security: prevent path traversal)
 	for _, char := range name {
 		if char == '/' || char == '\\' {
 			return fmt.Errorf("invalid project name: path separators are not allowed")
 		}
 	}
 
-	// Validate against pattern
 	if !projectNamePattern.MatchString(name) {
 		return fmt.Errorf("invalid project name: must start with lowercase letter and contain only lowercase letters, numbers, and hyphens")
 	}
 
-	// Check if directory already exists
 	if _, err := os.Stat(name); err == nil {
 		return fmt.Errorf("directory '%s' already exists", name)
 	}

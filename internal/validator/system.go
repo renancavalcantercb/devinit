@@ -28,13 +28,10 @@ func (v *SystemValidator) Validate(reqs []Requirement) (*ValidationResult, error
 	}
 
 	for _, req := range reqs {
-		// TODO: Evaluate When condition when template context is available
-		// For now, we check all requirements
 
 		exists, version, err := v.CheckCommand(req.Command)
 
 		if err != nil {
-			// Error checking command
 			valErr := ValidationError{
 				Command:     req.Command,
 				Message:     fmt.Sprintf("error checking %s: %v", req.Command, err),
@@ -50,7 +47,6 @@ func (v *SystemValidator) Validate(reqs []Requirement) (*ValidationResult, error
 		}
 
 		if !exists {
-			// Command not found
 			valErr := ValidationError{
 				Command:     req.Command,
 				Message:     fmt.Sprintf("%s not found", req.Command),
@@ -65,7 +61,6 @@ func (v *SystemValidator) Validate(reqs []Requirement) (*ValidationResult, error
 			continue
 		}
 
-		// Check version if specified
 		if req.Version != "" && version != "" {
 			matches, err := v.CompareVersion(version, req.Version)
 			if err != nil {
@@ -105,13 +100,11 @@ func (v *SystemValidator) Validate(reqs []Requirement) (*ValidationResult, error
 
 // CheckCommand checks if a command exists and returns its version
 func (v *SystemValidator) CheckCommand(cmd string) (exists bool, version string, err error) {
-	// Check if command exists using 'which' on Unix or 'where' on Windows
 	_, err = exec.LookPath(cmd)
 	if err != nil {
 		return false, "", nil
 	}
 
-	// Try to get version
 	version, _ = v.getCommandVersion(cmd)
 
 	return true, version, nil
@@ -119,7 +112,6 @@ func (v *SystemValidator) CheckCommand(cmd string) (exists bool, version string,
 
 // getCommandVersion attempts to get the version of a command
 func (v *SystemValidator) getCommandVersion(cmd string) (string, error) {
-	// Common version flags
 	versionFlags := []string{"--version", "-version", "-v", "version"}
 
 	for _, flag := range versionFlags {
@@ -128,7 +120,6 @@ func (v *SystemValidator) getCommandVersion(cmd string) (string, error) {
 			continue
 		}
 
-		// Try to extract version number
 		version := extractVersion(string(output))
 		if version != "" {
 			return version, nil
@@ -140,7 +131,6 @@ func (v *SystemValidator) getCommandVersion(cmd string) (string, error) {
 
 // extractVersion extracts a semantic version from command output
 func extractVersion(output string) string {
-	// Pattern for semantic versioning (e.g., 3.11.5, v1.2.3, 20.0.1)
 	patterns := []string{
 		`v?(\d+\.\d+\.\d+)`,           // Standard semver
 		`v?(\d+\.\d+)`,                 // Major.minor
@@ -164,7 +154,6 @@ func extractVersion(output string) string {
 func (v *SystemValidator) CompareVersion(current, requirement string) (bool, error) {
 	requirement = strings.TrimSpace(requirement)
 
-	// Parse operator and version
 	operator := ""
 	requiredVersion := requirement
 
@@ -192,11 +181,9 @@ func (v *SystemValidator) CompareVersion(current, requirement string) (bool, err
 		operator = "~"
 		requiredVersion = strings.TrimSpace(requirement[1:])
 	} else {
-		// No operator means exact match
 		operator = "="
 	}
 
-	// Parse versions
 	currentParts, err := parseVersion(current)
 	if err != nil {
 		return false, fmt.Errorf("invalid current version %s: %w", current, err)
@@ -207,7 +194,6 @@ func (v *SystemValidator) CompareVersion(current, requirement string) (bool, err
 		return false, fmt.Errorf("invalid required version %s: %w", requiredVersion, err)
 	}
 
-	// Compare based on operator
 	comparison := compareVersionParts(currentParts, requiredParts)
 
 	switch operator {
@@ -226,14 +212,12 @@ func (v *SystemValidator) CompareVersion(current, requirement string) (bool, err
 		if comparison < 0 {
 			return false, nil
 		}
-		// Check if major version is the same
 		return currentParts[0] == requiredParts[0], nil
 	case "~":
 		// ~1.2.3 allows >=1.2.3 but <1.3.0
 		if comparison < 0 {
 			return false, nil
 		}
-		// Check if major and minor versions are the same
 		return currentParts[0] == requiredParts[0] && currentParts[1] == requiredParts[1], nil
 	default:
 		return false, fmt.Errorf("unknown operator: %s", operator)

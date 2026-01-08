@@ -128,12 +128,10 @@ func (g *Generator) generateFile(filesDir string, fileSpec template.FileSpec, ct
 
 // shouldGenerateFile checks if a file should be generated based on its conditions
 func (g *Generator) shouldGenerateFile(fileSpec template.FileSpec, ctx *template.Context) bool {
-	// If no conditions, always generate
 	if len(fileSpec.Conditions) == 0 {
 		return true
 	}
 
-	// All conditions must be true
 	for _, condition := range fileSpec.Conditions {
 		if !g.evaluateCondition(condition, ctx) {
 			return false
@@ -146,20 +144,15 @@ func (g *Generator) shouldGenerateFile(fileSpec template.FileSpec, ctx *template
 // evaluateCondition evaluates a single condition string
 // Supports: {{ .VariableName }}, variable names, and simple expressions
 func (g *Generator) evaluateCondition(condition string, ctx *template.Context) bool {
-	// Trim whitespace
 	condition = strings.TrimSpace(condition)
 
-	// Remove {{ }} if present
 	condition = strings.TrimSpace(condition)
 	if strings.HasPrefix(condition, "{{") && strings.HasSuffix(condition, "}}") {
 		condition = strings.TrimSpace(condition[2 : len(condition)-2])
 	}
 
-	// Remove leading dot if present
 	condition = strings.TrimPrefix(condition, ".")
 
-	// Handle simple boolean variable lookup
-	// Try as direct field access first (e.g., "IncludeDocker")
 	switch condition {
 	case "IncludeDocker":
 		return ctx.IncludeDocker
@@ -167,7 +160,6 @@ func (g *Generator) evaluateCondition(condition string, ctx *template.Context) b
 		return ctx.IncludeTests
 	}
 
-	// Try variable map lookup
 	return ctx.GetBool(condition)
 }
 
