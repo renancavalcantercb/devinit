@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/renan-dev/devinit/internal/template"
 )
@@ -64,6 +65,14 @@ func (g *Generator) Generate(opts *Options) error {
 	// Generate files
 	filesDir := g.loader.GetFilesDir(tmpl)
 	for _, fileSpec := range tmpl.Files {
+		// Check if file should be generated based on conditions
+		if !g.shouldGenerateFile(fileSpec, ctx) {
+			if opts.DryRun {
+				fmt.Printf("Skipped: %s (conditions not met)\n", fileSpec.Destination)
+			}
+			continue
+		}
+
 		if err := g.generateFile(filesDir, fileSpec, ctx, opts.DryRun); err != nil {
 			return fmt.Errorf("failed to generate file %s: %w", fileSpec.Destination, err)
 		}
@@ -115,6 +124,51 @@ func (g *Generator) generateFile(filesDir string, fileSpec template.FileSpec, ct
 	}
 
 	return nil
+}
+
+// shouldGenerateFile checks if a file should be generated based on its conditions
+func (g *Generator) shouldGenerateFile(fileSpec template.FileSpec, ctx *template.Context) bool {
+	// If no conditions, always generate
+	if len(fileSpec.Conditions) == 0 {
+		return true
+	}
+
+	// All conditions must be true
+	for _, condition := range fileSpec.Conditions {
+		if !g.evaluateCondition(condition, ctx) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// evaluateCondition evaluates a single condition string
+// Supports: {{ .VariableName }}, variable names, and simple expressions
+func (g *Generator) evaluateCondition(condition string, ctx *template.Context) bool {
+	// Trim whitespace
+	condition = strings.TrimSpace(condition)
+
+	// Remove {{ }} if present
+	condition = strings.TrimSpace(condition)
+	if strings.HasPrefix(condition, "{{") && strings.HasSuffix(condition, "}}") {
+		condition = strings.TrimSpace(condition[2 : len(condition)-2])
+	}
+
+	// Remove leading dot if present
+	condition = strings.TrimPrefix(condition, ".")
+
+	// Handle simple boolean variable lookup
+	// Try as direct field access first (e.g., "IncludeDocker")
+	switch condition {
+	case "IncludeDocker":
+		return ctx.IncludeDocker
+	case "IncludeTests":
+		return ctx.IncludeTests
+	}
+
+	// Try variable map lookup
+	return ctx.GetBool(condition)
 }
 
 // mergeVariables merges user-provided variables with template defaults
