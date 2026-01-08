@@ -258,6 +258,11 @@ func runNewCommand(args []string, lang, framework, database, pythonVersion strin
 		return fmt.Errorf("project name is required")
 	}
 
+	// Validate project name (security: prevent path traversal, ensure valid format)
+	if err := generator.ValidateProjectName(projectName); err != nil {
+		return err
+	}
+
 	// Determine language and framework
 	if lang == "" {
 		return fmt.Errorf("--lang flag is required")
